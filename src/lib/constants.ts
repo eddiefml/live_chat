@@ -1,0 +1,10 @@
+export const MAX_MESSAGE_LENGTH = 2000
+export const MAX_CHANNEL_NAME_LENGTH = 50
+export const MIN_CHANNEL_NAME_LENGTH = 2
+export const NICKNAME_MIN_LENGTH = 3
+export const NICKNAME_MAX_LENGTH = 20
+export const MESSAGE_HISTORY_LIMIT = 100
+export const TYPING_THROTTLE_MS = 2000
+export const TYPING_STALE_MS = 4000
+export const TYPING_IDLE_MS = 3000
+export const REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '🔥', '👏', '😮', '😢']
