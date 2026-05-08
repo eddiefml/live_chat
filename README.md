@@ -34,6 +34,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - **Dark mode** — toggle between light and dark themes
 - **URL auto-linkify** — URLs in messages become clickable links
 
+
 ## Tech Stack
 
 - [Next.js 16](https://nextjs.org) (App Router)
