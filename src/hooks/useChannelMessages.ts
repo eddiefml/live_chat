@@ -3,26 +3,26 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { MESSAGE_HISTORY_LIMIT } from '@/lib/constants'
-import type { Message, UserPresence } from '@/types'
+import type { Message } from '@/types'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 export function useChannelMessages(
-  channelRef: React.MutableRefObject<RealtimeChannel | null>,
   channelId: number | null,
-  nickname: string,
-  sessionId: string
+  nickname: string
 ) {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
-  const [onlineUsers, setOnlineUsers] = useState<Map<string, UserPresence>>(new Map())
 
+  // Fetch message history on channel switch
   useEffect(() => {
-    if (!channelId) return
+    if (!channelId) {
+      setMessages([])
+      return
+    }
 
     setIsLoading(true)
     setError(null)
-    setMessages([])
 
     supabase
       .from('messages')
@@ -37,84 +37,50 @@ export function useChannelMessages(
       })
   }, [channelId])
 
+  // Listen for new messages via Postgres Changes (single source of truth)
   useEffect(() => {
-    const channel = channelRef.current
-    if (!channel) return
+    if (!channelId) return
 
-    const handleMessage = (p: { payload: Message }) => {
-      const msg = p.payload
-      setMessages((prev) => {
-        const exists = prev.some(
-          (m) => m.id === msg.id || (msg.temp_id && m.id === msg.temp_id)
-        )
-        if (exists) {
-          return prev.map((m) =>
-            m.id === msg.temp_id ? { ...msg, id: msg.id || msg.temp_id! } : m
-          )
-        }
-        return [...prev, msg]
-      })
+    const msgChannel = supabase.channel(`msg:${channelId}`)
+
+    msgChannel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `channel_id=eq.${channelId}`,
+      },
+      (payload) => {
+        const msg = payload.new as Message
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev
+          return [...prev, msg]
+        })
+      }
+    )
+
+    msgChannel.subscribe()
+
+    return () => {
+      supabase.removeChannel(msgChannel)
     }
-
-    channel.on('broadcast', { event: 'message' }, handleMessage)
-    // Presence is handled via the global app:global channel, not here
-
-    // Listeners are cleaned up when the channel is removed in useRealtimeChannel
-  }, [channelRef, channelId])
+  }, [channelId])
 
   const sendMessage = useCallback(
     async (content: string) => {
-      const ch = channelRef.current
-      if (!ch || !channelId || !content.trim()) return
+      if (!channelId || !content.trim()) return
 
-      const tempId = crypto.randomUUID()
-      const msgData = {
-        id: tempId,
-        temp_id: tempId,
+      const { error } = await supabase.from('messages').insert({
         channel_id: channelId,
         nickname: nickname || 'Anonymous',
         content: content.trim(),
-        created_at: new Date().toISOString(),
-      }
-
-      // Optimistic: add to local state immediately so sender always sees their message
-      setMessages((prev) => [...prev, msgData])
-
-      ch.send({
-        type: 'broadcast',
-        event: 'message',
-        payload: msgData,
       })
 
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          channel_id: channelId,
-          nickname: nickname || 'Anonymous',
-          content: content.trim(),
-        })
-        .select('*')
-        .single()
-
-      if (error) {
-        setMessages((prev) => prev.filter((m) => m.id !== tempId))
-        setError(new Error(error.message))
-        return
-      }
-
-      // Replace optimistic message with real DB record
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? { ...data, id: data.id } : m))
-      )
-
-      ch.send({
-        type: 'broadcast',
-        event: 'message',
-        payload: { ...data, temp_id: tempId },
-      })
+      if (error) setError(new Error(error.message))
     },
-    [channelRef, channelId, nickname]
+    [channelId, nickname]
   )
 
-  return { messages, isLoading, error, sendMessage, onlineUsers, setOnlineUsers }
+  return { messages, isLoading, error, sendMessage }
 }

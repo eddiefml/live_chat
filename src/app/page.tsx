@@ -93,7 +93,6 @@ export default function Page() {
       activeChannelName={activeChannelName}
       channelRef={channelRef}
       nickname={nickname}
-      sessionId={sessionId}
       typingData={typingData}
       onSelect={handleSelectChannel}
       onCreateChannel={createChannel}

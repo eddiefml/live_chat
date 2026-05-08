@@ -22,7 +22,6 @@ export function ChatLayout({
   activeChannelName,
   channelRef,
   nickname,
-  sessionId,
   typingData,
   onSelect,
   onCreateChannel,
@@ -35,7 +34,6 @@ export function ChatLayout({
   activeChannelName: string
   channelRef: React.MutableRefObject<RealtimeChannel | null>
   nickname: string
-  sessionId: string
   typingData: TypingData
   onSelect: (id: number) => void
   onCreateChannel: (name: string) => Promise<unknown>
@@ -94,7 +92,6 @@ export function ChatLayout({
             channelName={activeChannelName}
             channelRef={channelRef}
             nickname={nickname}
-            sessionId={sessionId}
             onlineCount={onlineCounts.get(activeChannelId) || 0}
             typingData={typingData}
           />
