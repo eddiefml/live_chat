@@ -10,6 +10,8 @@ import { useTypingIndicator } from '@/hooks/useTypingIndicator'
 import { ChatLayout } from '@/components/chat/ChatLayout'
 import type { UserPresence } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 export default function Page() {
   const { isNicknameSet } = useNickname()
   const sessionId = useSessionId()
