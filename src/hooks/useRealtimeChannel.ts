@@ -2,9 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import type { Message } from '@/types'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-export function useRealtimeChannel(channelId: number | null, sessionId: string) {
+export function useRealtimeChannel(
+  channelId: number | null,
+  sessionId: string,
+  onMsgRef: React.MutableRefObject<(msg: Message) => void>
+) {
   const channelRef = useRef<RealtimeChannel | null>(null)
   const [isConnected, setIsConnected] = useState(false)
 
@@ -17,6 +22,20 @@ export function useRealtimeChannel(channelId: number | null, sessionId: string) 
         presence: { key: sessionId },
       },
     })
+
+    // Postgres Changes for messages — must be registered BEFORE subscribe
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `channel_id=eq.${channelId}`,
+      },
+      (payload) => {
+        onMsgRef.current(payload.new as Message)
+      }
+    )
 
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') setIsConnected(true)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useSessionId } from '@/hooks/useSessionId'
 import { useNickname } from '@/hooks/useNickname'
@@ -8,7 +8,7 @@ import { useChannels } from '@/hooks/useChannels'
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel'
 import { useTypingIndicator } from '@/hooks/useTypingIndicator'
 import { ChatLayout } from '@/components/chat/ChatLayout'
-import type { UserPresence } from '@/types'
+import type { UserPresence, Message } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +27,8 @@ export default function Page() {
     [channels, activeChannelId]
   )
 
-  const { channelRef } = useRealtimeChannel(activeChannelId, sessionId)
+  const onMsgRef = useRef<(msg: Message) => void>(() => {})
+  const { channelRef } = useRealtimeChannel(activeChannelId, sessionId, onMsgRef)
   const typingData = useTypingIndicator(channelRef, nickname)
 
   // Global presence: one channel, tracks current channel, syncs online counts
@@ -94,6 +95,7 @@ export default function Page() {
       channelRef={channelRef}
       nickname={nickname}
       typingData={typingData}
+      onMsgRef={onMsgRef}
       onSelect={handleSelectChannel}
       onCreateChannel={createChannel}
     />

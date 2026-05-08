@@ -4,15 +4,23 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { MESSAGE_HISTORY_LIMIT } from '@/lib/constants'
 import type { Message } from '@/types'
-import type { RealtimeChannel } from '@supabase/supabase-js'
 
 export function useChannelMessages(
   channelId: number | null,
-  nickname: string
+  nickname: string,
+  onMsgRef: React.MutableRefObject<(msg: Message) => void>
 ) {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+
+  // Wire up the callback ref so useRealtimeChannel can push messages here
+  onMsgRef.current = (msg: Message) => {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev
+      return [...prev, msg]
+    })
+  }
 
   // Fetch message history on channel switch
   useEffect(() => {
@@ -35,36 +43,6 @@ export function useChannelMessages(
         else setMessages(data || [])
         setIsLoading(false)
       })
-  }, [channelId])
-
-  // Listen for new messages via Postgres Changes (single source of truth)
-  useEffect(() => {
-    if (!channelId) return
-
-    const msgChannel = supabase.channel(`msg:${channelId}`)
-
-    msgChannel.on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `channel_id=eq.${channelId}`,
-      },
-      (payload) => {
-        const msg = payload.new as Message
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === msg.id)) return prev
-          return [...prev, msg]
-        })
-      }
-    )
-
-    msgChannel.subscribe()
-
-    return () => {
-      supabase.removeChannel(msgChannel)
-    }
   }, [channelId])
 
   const sendMessage = useCallback(

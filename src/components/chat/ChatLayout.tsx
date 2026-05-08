@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Sidebar } from '@/components/chat/Sidebar'
 import { ChatArea } from '@/components/chat/ChatArea'
 import { EmptyState } from '@/components/chat/EmptyState'
-import type { Channel } from '@/types'
+import type { Channel, Message } from '@/types'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface TypingData {
@@ -23,6 +23,7 @@ export function ChatLayout({
   channelRef,
   nickname,
   typingData,
+  onMsgRef,
   onSelect,
   onCreateChannel,
 }: {
@@ -35,6 +36,7 @@ export function ChatLayout({
   channelRef: React.MutableRefObject<RealtimeChannel | null>
   nickname: string
   typingData: TypingData
+  onMsgRef: React.MutableRefObject<(msg: Message) => void>
   onSelect: (id: number) => void
   onCreateChannel: (name: string) => Promise<unknown>
 }) {
@@ -94,6 +96,7 @@ export function ChatLayout({
             nickname={nickname}
             onlineCount={onlineCounts.get(activeChannelId) || 0}
             typingData={typingData}
+            onMsgRef={onMsgRef}
           />
         ) : (
           <EmptyState

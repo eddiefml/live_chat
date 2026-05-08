@@ -6,6 +6,7 @@ import { useReactions } from '@/hooks/useReactions'
 import { ChatHeader } from '@/components/chat/ChatHeader'
 import { MessageList } from '@/components/chat/MessageList'
 import { MessageInput } from '@/components/chat/MessageInput'
+import type { Message } from '@/types'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface TypingData {
@@ -21,6 +22,7 @@ export function ChatArea({
   nickname,
   onlineCount,
   typingData,
+  onMsgRef,
 }: {
   channelId: number
   channelName: string
@@ -28,8 +30,9 @@ export function ChatArea({
   nickname: string
   onlineCount: number
   typingData: TypingData
+  onMsgRef: React.MutableRefObject<(msg: Message) => void>
 }) {
-  const { messages, isLoading, sendMessage } = useChannelMessages(channelId, nickname)
+  const { messages, isLoading, sendMessage } = useChannelMessages(channelId, nickname, onMsgRef)
 
   const { reactions, addReaction, removeReaction } = useReactions(
     channelRef,
