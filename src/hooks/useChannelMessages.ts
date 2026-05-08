@@ -77,6 +77,9 @@ export function useChannelMessages(
         created_at: new Date().toISOString(),
       }
 
+      // Optimistic: add to local state immediately so sender always sees their message
+      setMessages((prev) => [...prev, msgData])
+
       ch.send({
         type: 'broadcast',
         event: 'message',
@@ -98,6 +101,11 @@ export function useChannelMessages(
         setError(new Error(error.message))
         return
       }
+
+      // Replace optimistic message with real DB record
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...data, id: data.id } : m))
+      )
 
       ch.send({
         type: 'broadcast',
